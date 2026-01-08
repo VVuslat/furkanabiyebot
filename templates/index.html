@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Scalping Bot Paneli</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <header>
+        <h1>Scalping Strateji Paneli</h1>
+        <p>
+          EMA, RSI, ATR ve Markov zinciri bazlı sinyal ile TP/SL, beklenen değer ve
+          kazanma oranını güncel olarak gör.
+        </p>
+      </header>
+
+      <section class="controls">
+        <div>
+          <label for="symbol">Coin</label>
+          <input id="symbol" name="symbol" type="text" value="BTC" />
+        </div>
+        <div>
+          <label for="quote">Parite</label>
+          <input id="quote" name="quote" type="text" value="USDT" />
+        </div>
+        <div>
+          <label for="interval">Zaman Dilimi</label>
+          <select id="interval" name="interval">
+            <option value="1m">1m</option>
+            <option value="5m" selected>5m</option>
+            <option value="15m">15m</option>
+            <option value="1h">1h</option>
+            <option value="4h">4h</option>
+          </select>
+        </div>
+        <div>
+          <label for="leverage">Kaldıraç</label>
+          <input id="leverage" name="leverage" type="number" min="1" value="1" />
+        </div>
+        <button id="refresh">Sinyali Getir</button>
+      </section>
+
+      <section class="result" id="result">
+        <div class="card">
+          <h2>Güncel Sinyal</h2>
+          <div class="grid">
+            <div>
+              <span class="label">Sinyal</span>
+              <strong id="action">-</strong>
+              <p class="reason" id="reason">-</p>
+            </div>
+            <div>
+              <span class="label">Fiyat</span>
+              <strong id="price">-</strong>
+              <p id="timestamp">-</p>
+            </div>
+            <div>
+              <span class="label">TP / SL</span>
+              <strong id="tp">-</strong>
+              <strong id="sl">-</strong>
+            </div>
+            <div>
+              <span class="label">Beklenen Değer</span>
+              <strong id="ev">-</strong>
+              <p>Win rate: <span id="win-rate">-</span></p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>İndikatörler</h2>
+          <div class="grid">
+            <div>
+              <span class="label">EMA (9)</span>
+              <strong id="ema-fast">-</strong>
+            </div>
+            <div>
+              <span class="label">EMA (21)</span>
+              <strong id="ema-slow">-</strong>
+            </div>
+            <div>
+              <span class="label">RSI</span>
+              <strong id="rsi">-</strong>
+            </div>
+            <div>
+              <span class="label">ATR</span>
+              <strong id="atr">-</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Markov Olasılıkları</h2>
+          <div class="grid">
+            <div>
+              <span class="label">Up → Up</span>
+              <strong id="markov-up">-</strong>
+            </div>
+            <div>
+              <span class="label">Down → Down</span>
+              <strong id="markov-down">-</strong>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const actionEl = document.getElementById("action");
+      const reasonEl = document.getElementById("reason");
+      const priceEl = document.getElementById("price");
+      const timestampEl = document.getElementById("timestamp");
+      const tpEl = document.getElementById("tp");
+      const slEl = document.getElementById("sl");
+      const evEl = document.getElementById("ev");
+      const winRateEl = document.getElementById("win-rate");
+      const emaFastEl = document.getElementById("ema-fast");
+      const emaSlowEl = document.getElementById("ema-slow");
+      const rsiEl = document.getElementById("rsi");
+      const atrEl = document.getElementById("atr");
+      const markovUpEl = document.getElementById("markov-up");
+      const markovDownEl = document.getElementById("markov-down");
+
+      const controls = {
+        symbol: document.getElementById("symbol"),
+        quote: document.getElementById("quote"),
+        interval: document.getElementById("interval"),
+        leverage: document.getElementById("leverage"),
+      };
+
+      async function fetchSignal() {
+        const params = new URLSearchParams({
+          symbol: controls.symbol.value,
+          quote: controls.quote.value,
+          interval: controls.interval.value,
+          leverage: controls.leverage.value,
+        });
+
+        const response = await fetch(`/api/signal?${params.toString()}`);
+        const payload = await response.json();
+        if (payload.error) {
+          actionEl.textContent = "HATA";
+          reasonEl.textContent = payload.error;
+          return;
+        }
+
+        actionEl.textContent = payload.action;
+        reasonEl.textContent = payload.reason;
+        priceEl.textContent = payload.price;
+        timestampEl.textContent = payload.timestamp;
+        tpEl.textContent = `TP: ${payload.tp_price}`;
+        slEl.textContent = `SL: ${payload.sl_price}`;
+        evEl.textContent = payload.expected_value;
+        winRateEl.textContent = payload.win_rate;
+        emaFastEl.textContent = payload.ema_fast;
+        emaSlowEl.textContent = payload.ema_slow;
+        rsiEl.textContent = payload.rsi;
+        atrEl.textContent = payload.atr;
+        markovUpEl.textContent = payload.markov.up_prob;
+        markovDownEl.textContent = payload.markov.down_prob;
+      }
+
+      document.getElementById("refresh").addEventListener("click", fetchSignal);
+      fetchSignal();
+      setInterval(fetchSignal, 30000);
+    </script>
+  </body>
+</html>
